@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Elite Energy Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #000000;
+            --bg-darker: #050505;
+            --bg-lighter: #1A1A1A;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --text-muted: #666666;
+            --accent-color: #00FFFF;
+            --border-subtle: rgba(0, 255, 255, 0.15);
+            --accent-pink: #F72585;
+            --accent-orange: #FF6B35;
+            --primary-gradient: linear-gradient(135deg, var(--accent-color) 0%, #0099CC 100%);
+            --secondary-gradient: linear-gradient(135deg, var(--accent-orange) 0%, #F7931E 100%);
+            --accent-gradient: linear-gradient(135deg, var(--accent-pink) 0%, #C77DFF 100%);
+            --danger-color: #ff4d4d;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none !important;
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        /* LOADING SCREEN */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            transition: opacity 0.5s ease-out 3s, visibility 0.5s ease-out 3s;
+        }
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loading-container { text-align: center; position: relative; width: 100%; max-width: 500px; }
+        .loading-animation { position: relative; width: 200px; height: 200px; margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; }
+        .loading-icon { font-size: 3rem; color: var(--accent-color); animation: pulse-grow 1.5s ease-in-out infinite; position: relative; z-index: 1; }
+        .loading-circle { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid transparent; border-top-color: var(--accent-color); transform: rotate(0deg); animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; }
+        .loading-circle::before { content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: var(--accent-color); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px var(--accent-color); }
+        .loading-circle-alt { position: absolute; width: 80%; height: 80%; border-radius: 50%; border: 3px solid transparent; border-bottom-color: var(--accent-pink); transform: rotate(0deg) scale(0.8); animation: spin-reverse 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; }
+        .loading-text h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 2px; font-family: 'Montserrat', sans-serif; }
+        .loading-text p { color: var(--text-secondary); font-style: italic; margin-bottom: 2rem; font-size: 1.2rem; font-family: 'Montserrat', sans-serif; }
+        .loading-progress { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+        .loading-bar { width: 8px; height: 30px; background: var(--primary-gradient); border-radius: 4px; animation: loadingPulse 1.4s ease-in-out infinite; }
+        .loading-bar:nth-child(2) { animation-delay: 0.2s; background: var(--secondary-gradient); }
+        .loading-bar:nth-child(3) { animation-delay: 0.4s; background: var(--accent-gradient); }
+        .loading-bar:nth-child(4) { animation-delay: 0.6s; background: var(--primary-gradient); }
+        .loading-bar:nth-child(5) { animation-delay: 0.8s; background: var(--secondary-gradient); }
+        
+        /* HEADER */
+        .header { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-subtle); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(-100%); opacity: 0; animation: slideDown 0.8s ease 3.5s forwards; }
+        .header-content { display: flex; align-items: center; justify-content: space-between; height: 80px; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; font-size: 1.8rem; font-weight: 800; color: var(--text-primary); transition: all 0.3s ease; text-decoration: none; text-transform: uppercase; }
+        .logo:hover { transform: scale(1.03); }
+        .logo-icon { width: 2.5rem; height: 2.5rem; color: var(--accent-color); animation: pulse 2s infinite; filter: drop-shadow(0 0 10px var(--accent-color)); }
+        .nav { display: flex; align-items: center; gap: 2rem; }
+        .mobile-menu-toggle { display: none; background: none; border: none; color: var(--text-primary); padding: 0.5rem; font-size: 1.5rem; z-index: 1001; }
+        /* PROFILE DROPDOWN */
+        .profile-dropdown {
+            position: relative;
+            margin-left: 0.5rem;
+        }
+        .profile-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 50px;
+            color: var(--bg-dark);
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .profile-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 255, 255, 0.4);
+        }
+        .profile-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            flex-shrink: 0;
+        }
+        .profile-btn span {
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: rgba(26, 26, 26, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+            min-width: 200px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .dropdown-menu.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+        .dropdown-item i {
+            width: 16px;
+            text-align: center;
+        }
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-subtle);
+            margin: 0.5rem 0;
+        }
+        
+        /* DYNAMIC BACKGROUND & CURSOR */
+        #particle-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -10; }
+        #ambient-glow { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; background: radial-gradient(circle at var(--x) var(--y), rgba(0, 255, 255, 0.15) 0%, transparent 40%); transition: background 0.3s ease-out; }
+        .custom-cursor { position: fixed; width: 40px; height: 40px; z-index: 10011; pointer-events: none; transform: translate(-50%, -50%); transition: transform 0.1s ease, color 0.3s ease; }
+        .dumbbell-cursor { font-size: 40px; color: var(--accent-color); animation: rotate 3s linear infinite; filter: drop-shadow(0 0 15px var(--accent-color)); transition: color 0.3s ease, filter 0.3s ease;}
+        
+        /* SMASH EFFECTS */
+        .smash-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10000; }
+        .smash-particle { position: absolute; font-size: 16px; pointer-events: none; animation: smash 0.8s ease-out forwards; filter: drop-shadow(0 0 6px var(--accent-color)); }
+        
+        /* MAIN CONTENT & EMOJI DISPLAY */
+        .container { max-width: 1600px; margin: 0 auto; padding: 0 2rem; }
+        #energy-visualizer-page { padding-top: 120px; padding-bottom: 60px; }
+        .section-header { text-align: center; max-width: 1000px; margin: 0 auto 3rem; }
+        .section-header h2 { font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 900; line-height: 1.2; margin-bottom: 1rem; text-transform: uppercase; background: linear-gradient(90deg, var(--text-primary), var(--accent-color), var(--text-primary)); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: gradient-shift 3s ease infinite; transition: all 0.3s ease; }
+        .section-header p { font-size: 1.125rem; color: var(--text-secondary); line-height: 1.6; }
+        
+        .emoji-display-container { display: flex; align-items: center; justify-content: center; height: 400px; margin-bottom: 2rem; }
+        .emoji-character { font-size: 20rem; animation: emoji-glow-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, continuous-pulse 2s infinite alternate; transition: text-shadow 0.3s ease; }
+        
+        /* ENERGY INPUTS */
+        .dynamic-inputs-section { width: 100%; max-width: 800px; margin: 0 auto 4rem; }
+        .age-input-container { margin-bottom: 2rem; opacity: 0; animation: slide-up 0.6s ease-out forwards; }
+        .age-input-label { display: block; font-size: 1.2rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-secondary); text-align: center; }
+        .age-input { width: 100%; max-width: 200px; padding: 0.75rem; background: rgba(25, 25, 25, 0.7); backdrop-filter: blur(5px); border: 1px solid var(--border-subtle); border-radius: 50px; color: var(--text-primary); font-size: 1rem; text-align: center; margin: 0 auto; display: block; transition: all 0.3s ease; }
+        .age-input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 10px rgba(0, 255, 255, 0.3); }
+        .age-input.error { border-color: var(--danger-color); box-shadow: 0 0 10px rgba(255, 77, 77, 0.3); }
+        .error-message { color: var(--danger-color); text-align: center; margin-top: 0.5rem; font-size: 0.9rem; }
+        .suggest-button-container { text-align: center; margin: 2rem 0; opacity: 0; animation: slide-up 0.6s 0.3s ease-out forwards; }
+        .suggest-button { padding: 1rem 2rem; background: var(--primary-gradient); border: none; border-radius: 50px; color: var(--bg-dark); font-size: 1.2rem; font-weight: 700; cursor: pointer !important; transition: all 0.3s ease; }
+        .suggest-button:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 255, 255, 0.4); }
+        .input-category { margin-bottom: 2.5rem; opacity: 0; transform: translateY(20px); animation: slide-up 0.6s ease-out forwards; }
+        .category-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px; transition: color 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 1rem; }
+        .category-title i { transition: transform 0.3s ease; }
+        .input-category:hover .category-title i { transform: scale(1.2) rotate(-10deg); }
+        .input-options { display: flex; flex-direction: column; gap: 1rem; }
+        .input-option { display: block; padding: 1rem 1.5rem; background: rgba(25, 25, 25, 0.7); backdrop-filter: blur(5px); border: 1px solid var(--border-subtle); border-radius: 50px; transition: all 0.3s ease; text-align: center; font-weight: 600; font-size: 1.1rem; letter-spacing: 0.5px; opacity: 0; transform: translateX(-20px); animation: slideInItem 0.5s ease-out forwards; position: relative; }
+        .input-option:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .input-option.selected { border-color: var(--accent-color); background: rgba(0, 255, 255, 0.2); }
+        
+        /* SUGGESTION SECTION */
+        .suggestion-section { width: 100%; max-width: 800px; margin: 0 auto 4rem; opacity: 0; animation: slide-up 0.6s 0.2s ease-out forwards; }
+        .suggestion-container { background: rgba(25, 25, 25, 0.6); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 25px; transition: border-color 0.3s ease; }
+        .suggestion-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 20px; }
+        .suggestion-icon { font-size: 2rem; color: var(--accent-color); }
+        .suggestion-title { font-size: 1.5rem; font-weight: 700; color: var(--accent-color); }
+        .suggestion-content { font-size: 1.1rem; line-height: 1.6; color: var(--text-secondary); }
+        .suggestion-exercise { margin-top: 15px; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; border-left: 4px solid var(--accent-color); }
+        .suggestion-exercise h4 { font-size: 1.2rem; margin-bottom: 10px; color: var(--text-primary); }
+        .suggestion-exercise p { margin-bottom: 10px; }
+        .suggestion-exercise ul { margin-left: 20px; }
+        .suggestion-exercise li { margin-bottom: 5px; }
+        
+        /* LOGS SECTION */
+        .logs-section { width: 100%; max-width: 800px; margin: 4rem auto; opacity: 0; animation: slide-up 0.6s 0.5s ease-out forwards; }
+        .logs-container { background: rgba(25, 25, 25, 0.6); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 25px; transition: border-color 0.3s ease; }
+        .logs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logs-title { font-size: 1.5rem; font-weight: 700; color: var(--accent-color); transition: color 0.3s ease; }
+        .clear-logs-btn { background: none; border: 1px solid var(--danger-color); color: var(--danger-color); border-radius: 8px; padding: 8px 15px; font-weight: 600; transition: all 0.3s ease; }
+        .clear-logs-btn:hover { background: var(--danger-color); color: white; transform: scale(1.05); }
+        .logs-list { display: flex; flex-direction: column; gap: 15px; max-height: 400px; overflow-y: auto; padding-right: 10px; }
+        .log-item { display: flex; align-items: center; padding: 15px; background: var(--bg-dark); border-radius: 10px; border-left: 4px solid var(--accent-color); transition: all 0.3s ease; animation: slideInItem 0.4s ease-out; }
+        .log-item:hover { transform: translateX(5px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); }
+        .log-color { width: 20px; height: 20px; border-radius: 50%; margin-right: 15px; border: 2px solid rgba(255, 255, 255, 0.3); flex-shrink: 0; }
+        .log-content { flex-grow: 1; }
+        .log-category { font-weight: 700; margin-bottom: 5px; }
+        .log-option { color: var(--text-secondary); font-size: 0.9rem; }
+        .log-time { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; padding-left: 1rem; flex-shrink: 0; }
+        .delete-log-btn { background: none; border: none; color: var(--text-muted); font-size: 1.2rem; transition: all 0.3s ease; }
+        .delete-log-btn:hover { color: var(--danger-color); transform: scale(1.2); }
+        .empty-logs { text-align: center; padding: 30px; color: var(--text-muted); font-style: italic; }
+        
+        /* CALENDAR SECTION */
+        .calendar-section { width: 100%; max-width: 800px; margin: 4rem auto; opacity: 0; animation: slide-up 0.6s 1s ease-out forwards; }
+        .calendar-container { background: rgba(25, 25, 25, 0.6); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 25px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px; }
+        .calendar-header button { background: none; border: 1px solid var(--border-subtle); color: var(--text-secondary); width: 40px; height: 40px; border-radius: 50%; font-size: 1rem; transition: all 0.3s ease; }
+        .calendar-header button:hover { background: var(--accent-color); color: var(--bg-dark); border-color: var(--accent-color); }
+        .calendar-header h3 { font-size: 1.5rem; font-weight: 700; color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-day, .weekday-label { display: flex; align-items: center; justify-content: center; height: 50px; border-radius: 8px; }
+        .weekday-label { font-weight: 700; color: var(--text-secondary); font-size: 0.9rem; }
+        .calendar-day { background-color: rgba(255, 255, 255, 0.05); transition: all 0.3s ease; position: relative; }
+        .calendar-day.not-current-month { color: var(--text-muted); background: transparent; }
+        .calendar-day.today { border: 2px solid var(--accent-color); font-weight: bold; }
+        .calendar-day.has-log { font-weight: bold; color: var(--bg-dark); cursor: pointer !important; }
+        .calendar-day.has-log:hover { transform: scale(1.1); box-shadow: 0 0 15px var(--accent-color); }
+        .calendar-log-icon { position: absolute; bottom: 4px; right: 4px; font-size: 0.7rem; color: rgba(0,0,0,0.5); }
+        /* LOG MODAL */
+        .log-modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 10010; opacity: 0; animation: fadeIn 0.3s forwards; }
+        .log-modal-content { background: var(--bg-darker); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 30px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; position: relative; animation: slide-up 0.4s 0.1s backwards; }
+        .log-modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); transition: all 0.3s ease; }
+        .log-modal-close:hover { color: var(--danger-color); transform: rotate(90deg); }
+        .log-modal-content h3 { text-align: center; color: var(--accent-color); margin-bottom: 2rem; }
+        .log-modal-list { display: flex; flex-direction: column; gap: 1rem; }
+        .log-modal-section { margin-bottom: 1.5rem; }
+        .log-modal-section-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent-color); display: flex; align-items: center; gap: 0.5rem; }
+        .log-modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; }
+        .log-modal-btn { padding: 0.75rem 1.5rem; border-radius: 50px; font-weight: 600; transition: all 0.3s ease; cursor: pointer !important; }
+        .download-btn { background: var(--primary-gradient); color: var(--bg-dark); border: none; }
+        .share-btn { background: var(--secondary-gradient); color: var(--bg-dark); border: none; }
+        .log-modal-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 255, 255, 0.4); }
+        
+        /* FOOTER */
+        .footer { background: var(--bg-darker); border-top: 1px solid var(--border-subtle); padding: 4rem 0 2rem; text-align: center; margin-top: 4rem; transition: border-top-color 0.3s ease;}
+        .footer p { font-size: 1.1rem; color: var(--text-secondary); }
+        
+        /* ANIMATIONS */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes loadingPulse { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin-reverse { from { transform: rotate(0deg) scale(0.8); } to { transform: rotate(-360deg) scale(0.8); } }
+        @keyframes pulse-grow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } }
+        @keyframes smash { 0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(720deg); opacity: 0; } }
+        @keyframes slide-up { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideInItem { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes emoji-glow-in { 
+            0% { transform: scale(0.5) rotate(-30deg); opacity: 0; text-shadow: 0 0 0px var(--glow-color); }
+            50% { transform: scale(1.1) rotate(10deg); opacity: 1; text-shadow: 0 0 80px var(--glow-color), 0 0 120px var(--glow-color); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; text-shadow: 0 0 40px var(--glow-color), 0 0 60px var(--glow-color); }
+        }
+        @keyframes continuous-pulse {
+            0% { text-shadow: 0 0 40px var(--glow-color), 0 0 60px var(--glow-color); }
+            100% { text-shadow: 0 0 60px var(--glow-color), 0 0 80px var(--glow-color); }
+        }
+        
+        /* ENHANCED HOVER EFFECTS */
+        .input-option:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            transform: translateY(-5px) scale(1.05);
+        }
+        
+        .suggest-button:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.7);
+            transform: translateY(-5px);
+        }
+        
+        .log-item:hover {
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+        
+        .calendar-day.has-log:hover {
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+        }
+        
+        /* ENHANCED BACKGROUND ANIMATIONS */
+        #particle-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -10;
+            background: radial-gradient(ellipse at center, rgba(0, 20, 40, 0.8) 0%, rgba(0, 0, 0, 1) 100%);
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 968px) {
+            .nav { position: fixed; top: 80px; left: 0; width: 100%; height: calc(100vh - 80px); background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px); flex-direction: column; justify-content: center; gap: 2rem; transform: translateX(-100%); transition: transform 0.3s ease; }
+            .nav.nav-open { transform: translateX(0); }
+            .mobile-menu-toggle { display: block; }
+        }
+        @media (max-width: 768px) { 
+            .emoji-character { font-size: 15rem; }
+            .emoji-display-container { height: 300px; }
+            .calendar-day, .weekday-label { height: 40px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particle-background"></canvas>
+    <div id="root"></div>
+    <div id="ambient-glow"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        const THREE = window.THREE;
+        const { jsPDF } = window.jspdf;
+        
+        // --- UTILITY & SHARED COMPONENTS ---
+        const CustomCursor = ({ color }) => {
+            const [position, setPosition] = useState({ x: -100, y: -100 });
+            useEffect(() => {
+                const handleMouseMove = (e) => setPosition({ x: e.clientX, y: e.clientY });
+                window.addEventListener('mousemove', handleMouseMove);
+                return () => window.removeEventListener('mousemove', handleMouseMove);
+            }, []);
+            return (
+                <div className="custom-cursor" style={{ left: `${position.x}px`, top: `${position.y}px` }}>
+                    <i className="fas fa-dumbbell dumbbell-cursor" style={{ color: color, filter: `drop-shadow(0 0 15px ${color})` }}></i>
+                </div>
+            );
+        };
+        
+        const AmbientGlow = ({color}) => {
+            useEffect(() => {
+                const glowElement = document.getElementById('ambient-glow');
+                glowElement.style.background = `radial-gradient(circle at var(--x) var(--y), ${color}1A 0%, transparent 40%)`;
+                const handleMouseMove = (e) => {
+                    glowElement.style.setProperty('--x', `${e.clientX}px`);
+                    glowElement.style.setProperty('--y', `${e.clientY}px`);
+                };
+                window.addEventListener('mousemove', handleMouseMove);
+                return () => window.removeEventListener('mousemove', handleMouseMove);
+            }, [color]);
+            return null;
+        };
+        
+        const ParticleBackground = () => {
+            useEffect(() => {
+                const currentMount = document.getElementById('particle-background');
+                if (!currentMount) return;
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5;
+                const renderer = new THREE.WebGLRenderer({ canvas: currentMount, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                // Enhanced particle system
+                const particleCount = 8000; // Increased particle count
+                const particlesGeometry = new THREE.BufferGeometry();
+                const posArray = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+                
+                for (let i = 0; i < particleCount * 3; i += 3) {
+                    // Position
+                    posArray[i] = (Math.random() - 0.5) * 20;
+                    posArray[i + 1] = (Math.random() - 0.5) * 20;
+                    posArray[i + 2] = (Math.random() - 0.5) * 20;
+                    
+                    // Colors - mix of cyan and blue with some variation
+                    const colorVariation = Math.random();
+                    if (colorVariation > 0.7) {
+                        colors[i] = 0.0; // R
+                        colors[i + 1] = 1.0; // G
+                        colors[i + 2] = 1.0; // B - Cyan
+                    } else if (colorVariation > 0.4) {
+                        colors[i] = 0.0; // R
+                        colors[i + 1] = 0.5; // G
+                        colors[i + 2] = 1.0; // B - Light blue
+                    } else {
+                        colors[i] = 0.2; // R
+                        colors[i + 1] = 0.7; // G
+                        colors[i + 2] = 1.0; // B - Lighter blue
+                    }
+                }
+                
+                particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+                particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const particlesMaterial = new THREE.PointsMaterial({ 
+                    size: 0.02, 
+                    vertexColors: true,
+                    blending: THREE.AdditiveBlending,
+                    transparent: true,
+                    opacity: 0.9,
+                    sizeAttenuation: true
+                });
+                
+                const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+                scene.add(particleMesh);
+                
+                // Add a second layer of larger particles
+                const largeParticleCount = 1000;
+                const largeParticlesGeometry = new THREE.BufferGeometry();
+                const largePosArray = new Float32Array(largeParticleCount * 3);
+                
+                for (let i = 0; i < largeParticleCount * 3; i += 3) {
+                    largePosArray[i] = (Math.random() - 0.5) * 30;
+                    largePosArray[i + 1] = (Math.random() - 0.5) * 30;
+                    largePosArray[i + 2] = (Math.random() - 0.5) * 30;
+                }
+                
+                largeParticlesGeometry.setAttribute('position', new THREE.BufferAttribute(largePosArray, 3));
+                
+                const largeParticlesMaterial = new THREE.PointsMaterial({ 
+                    size: 0.05, 
+                    color: 0x00ffff,
+                    blending: THREE.AdditiveBlending,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                const largeParticleMesh = new THREE.Points(largeParticlesGeometry, largeParticlesMaterial);
+                scene.add(largeParticleMesh);
+                
+                // Mouse interaction
+                let mouseX = 0, mouseY = 0;
+                const handleMouseMove = (event) => { 
+                    mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+                    mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+                };
+                document.addEventListener('mousemove', handleMouseMove);
+                
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    
+                    // Rotate particles
+                    particleMesh.rotation.y += 0.0008;
+                    particleMesh.rotation.x += 0.0005;
+                    largeParticleMesh.rotation.y -= 0.0005;
+                    largeParticleMesh.rotation.x -= 0.0003;
+                    
+                    // Move camera based on mouse position
+                    camera.position.x += (mouseX * 2 - camera.position.x) * 0.05;
+                    camera.position.y += (mouseY * 2 - camera.position.y) * 0.05;
+                    camera.lookAt(scene.position);
+                    
+                    renderer.render(scene, camera);
+                };
+                animate();
+                
+                const handleResize = () => {
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                };
+                window.addEventListener('resize', handleResize);
+                
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    document.removeEventListener('mousemove', handleMouseMove);
+                };
+            }, []);
+            return null;
+        };
+        const LoadingScreen = () => {
+            const [hidden, setHidden] = useState(false);
+            useEffect(() => {
+                const timer = setTimeout(() => setHidden(true), 3500);
+                return () => clearTimeout(timer);
+            }, []);
+            if (hidden) return null;
+            return (
+                <div className="loading-screen">
+                    <div className="loading-container">
+                        <div className="loading-animation">
+                            <div className="loading-circle"></div>
+                            <div className="loading-circle-alt"></div>
+                            <i className="fas fa-dumbbell loading-icon"></i>
+                        </div>
+                        <div className="loading-text">
+                            <h2>ELITE PERFORMANCE</h2>
+                            <p>"Visualizing your energy field"</p>
+                        </div>
+                        <div className="loading-progress">
+                            <div className="loading-bar"></div><div className="loading-bar"></div><div className="loading-bar"></div><div className="loading-bar"></div><div className="loading-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        const Header = ({ userName, onLogout }) => {
+            const [isDropdownOpen, setDropdownOpen] = useState(false);
+            const [isNavOpen, setNavOpen] = useState(false);
+            const dropdownRef = useRef(null);
+        
+            useEffect(() => {
+                const handleOutsideClick = (e) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                        setDropdownOpen(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleOutsideClick);
+                return () => document.removeEventListener('mousedown', handleOutsideClick);
+            }, []);
+            return (
+                <header className="header">
+                    <div className="container">
+                        <div className="header-content">
+                            <a href="plan.html" className="logo">
+                                <i className="fas fa-dumbbell logo-icon"></i>
+                                <span>ELITE</span>
+                            </a>
+                            <nav className={`nav ${isNavOpen ? 'nav-open' : ''}`}>
+                                <div className="profile-dropdown" ref={dropdownRef}>
+                                    <button className="profile-btn" onClick={() => setDropdownOpen(!isDropdownOpen)}>
+                                        <div className="profile-avatar"><i className="fas fa-user"></i></div>
+                                        <span>{userName}</span>
+                                        <i className={`fas fa-chevron-down`} style={{transition: 'transform 0.3s', transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}></i>
+                                    </button>
+                                    <div className={`dropdown-menu ${isDropdownOpen ? 'active' : ''}`}>
+                                        <div className="dropdown-divider"></div>
+                                        <a href="#" className="dropdown-item" onClick={onLogout}>
+                                            <i className="fas fa-sign-out-alt"></i> Logout
+                                        </a>
+                                    </div>
+                                </div>
+                            </nav>
+                            <button className="mobile-menu-toggle" onClick={() => setNavOpen(!isNavOpen)}>
+                                <i className={`fas ${isNavOpen ? 'fa-times' : 'fa-bars'}`}></i>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+            );
+        };
+        const SmashEffectContainer = ({ smashEvents }) => {
+            const [effects, setEffects] = useState([]);
+            useEffect(() => {
+                if (smashEvents.length === 0) return;
+                const { x, y, color } = smashEvents[smashEvents.length - 1];
+                const id = Date.now();
+                const newEffect = {
+                    id, x, y, color,
+                    particles: Array.from({ length: 15 }).map(() => ({ // Increased particle count
+                        icon: ['fa-dumbbell', 'fa-running', 'fa-bolt', 'fa-star-of-life', 'fa-fire'][Math.floor(Math.random() * 5)],
+                        tx: (Math.random() - 0.5) * 200, // Increased spread
+                        ty: (Math.random() - 0.5) * 200,
+                    }))
+                };
+                setEffects(prev => [...prev, newEffect]);
+                setTimeout(() => setEffects(prev => prev.filter(e => e.id !== id)), 1200);
+            }, [smashEvents]);
+            return (
+                <div className="smash-container">
+                    {effects.map(effect => (
+                        <div key={effect.id}>
+                            {effect.particles.map((p, i) => <div key={i} className="smash-particle" style={{ left: effect.x, top: effect.y, '--tx': `${p.tx}px`, '--ty': `${p.ty}px`, color: effect.color, '--accent-color': effect.color }}><i className={`fas ${p.icon}`}></i></div>)}
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+        
+        const EmojiDisplay = ({ emoji, color, key }) => {
+            return (
+                <div className="emoji-display-container" key={key}>
+                    <span className="emoji-character" style={{ textShadow: `0 0 40px ${color}, 0 0 60px ${color}`, '--glow-color': color }}>
+                        {emoji}
+                    </span>
+                </div>
+            );
+        };
+        
+        // Generate unique colors for each option
+        const generateUniqueColors = (count) => {
+            const colors = [];
+            const hueStep = 360 / count;
+            for (let i = 0; i < count; i++) {
+                const hue = Math.floor(i * hueStep);
+                colors.push(`hsl(${hue}, 100%, 50%)`);
+            }
+            return colors;
+        };
+        
+        const DynamicInputs = ({ onOptionSelect, selectedOptions, onAgeChange, age, onSuggestExercises, ageError }) => {
+            // Generate unique colors for all options
+            const allOptions = [
+                "Happy", "Content", "Sad", "Anxious", "Irritated", "Excited", "Calm", "Angry",
+                "Very High", "High Energy", "Balanced", "Low Energy", "Very Low",
+                "Pain Present", "Relaxed", "Tense", "Energetic", "Fatigued", "Numb",
+                "Focused", "Creative", "Mindful", "Distracted", "Confused", "Alert", "Tired"
+            ];
+            const uniqueColors = generateUniqueColors(allOptions.length);
+            
+            const categories = [
+                { 
+                    title: "Current Mood", 
+                    icon: "fa-smile-beam", 
+                    options: [ 
+                        { label: "Happy", emoji: "😊" }, 
+                        { label: "Content", emoji: "😌" }, 
+                        { label: "Sad", emoji: "😢" }, 
+                        { label: "Anxious", emoji: "😟" }, 
+                        { label: "Irritated", emoji: "😠" }, 
+                        { label: "Excited", emoji: "🎉" }, 
+                        { label: "Calm", emoji: "🧘" }, 
+                        { label: "Angry", emoji: "😡" } 
+                    ] 
+                },
+                { 
+                    title: "Energy Level", 
+                    icon: "fa-bolt", 
+                    options: [ 
+                        { label: "Very High", emoji: "🚀" }, 
+                        { label: "High Energy", emoji: "🔥" }, 
+                        { label: "Balanced", emoji: "⚡️" }, 
+                        { label: "Low Energy", emoji: "🔋" }, 
+                        { label: "Very Low", emoji: "🔌" } 
+                    ] 
+                },
+                { 
+                    title: "Physical Sensation", 
+                    icon: "fa-running", 
+                    options: [ 
+                        { label: "Pain Present", emoji: "🤕" }, 
+                        { label: "Relaxed", emoji: "😌" }, 
+                        { label: "Tense", emoji: "😬" }, 
+                        { label: "Energetic", emoji: "💪" }, 
+                        { label: "Fatigued", emoji: "😴" }, 
+                        { label: "Numb", emoji: "🥶" } 
+                    ] 
+                },
+                { 
+                    title: "Cognitive State", 
+                    icon: "fa-brain", 
+                    options: [ 
+                        { label: "Focused", emoji: "🎯" }, 
+                        { label: "Creative", emoji: "💡" }, 
+                        { label: "Mindful", emoji: "🧘‍♀️" }, 
+                        { label: "Distracted", emoji: "😵‍💫" }, 
+                        { label: "Confused", emoji: "🤔" }, 
+                        { label: "Alert", emoji: "👁️" }, 
+                        { label: "Tired", emoji: "😪" } 
+                    ] 
+                },
+            ];
+            
+            // Assign unique colors to each option
+            let colorIndex = 0;
+            const categoriesWithColors = categories.map(category => {
+                const optionsWithColors = category.options.map(option => {
+                    const color = uniqueColors[colorIndex++];
+                    return { ...option, color };
+                });
+                return { ...category, options: optionsWithColors };
+            });
+            
+            return (
+                <div className="dynamic-inputs-section">
+                    <div className="age-input-container">
+                        <label className="age-input-label" htmlFor="age-input">Enter Your Age</label>
+                        <input 
+                            type="number" 
+                            id="age-input" 
+                            className={`age-input ${ageError ? 'error' : ''}`} 
+                            value={age || ''} 
+                            onChange={(e) => onAgeChange(e.target.value)}
+                            min="5"
+                            max="120"
+                            placeholder="Age"
+                        />
+                        {ageError && <div className="error-message">{ageError}</div>}
+                    </div>
+                    
+                    <div className="suggest-button-container">
+                        <button className="suggest-button" onClick={onSuggestExercises}>
+                            <i className="fas fa-dumbbell"></i> Suggest Exercises
+                        </button>
+                    </div>
+                    
+                    {categoriesWithColors.map((category, index) => (
+                        <div key={index} className="input-category" style={{animationDelay: `${index * 0.15}s`}}>
+                            <h3 className="category-title"><i className={`fas ${category.icon}`}></i>{category.title}</h3>
+                            <div className="input-options">
+                                {category.options.map((option, optionIndex) => (
+                                    <div 
+                                        key={optionIndex} 
+                                        className={`input-option ${selectedOptions[category.title] === option.label ? 'selected' : ''}`} 
+                                        onClick={() => onOptionSelect(category.title, option.label, option.color, option.emoji)} 
+                                        style={{
+                                            animationDelay: `${(optionIndex * 0.08) + 0.2}s`,
+                                            backgroundColor: selectedOptions[category.title] === option.label ? option.color + '33' : '',
+                                            borderColor: selectedOptions[category.title] === option.label ? option.color : ''
+                                        }}
+                                    >
+                                        <span className="option-label">{option.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+        
+        const SuggestionSection = ({ suggestion }) => {
+            if (!suggestion) return null;
+            
+            return (
+                <div className="suggestion-section">
+                    <div className="suggestion-container">
+                        <div className="suggestion-header">
+                            <i className="fas fa-lightbulb suggestion-icon"></i>
+                            <h3 className="suggestion-title">Personalized Exercise Suggestions</h3>
+                        </div>
+                        <div className="suggestion-content">
+                            <p>{suggestion.description}</p>
+                            <div className="suggestion-exercise">
+                                <h4>{suggestion.title}</h4>
+                                <ul>
+                                    {suggestion.steps.map((step, index) => (
+                                        <li key={index}>{step}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        const LogsSection = ({ logs, onClearLogs, onDeleteLog }) => {
+            return (
+                <div className="logs-section">
+                    <div className="logs-container">
+                        <div className="logs-header">
+                            <h3 className="logs-title">Energy Logs</h3>
+                            {logs.length > 0 && <button className="clear-logs-btn" onClick={onClearLogs}><i className="fas fa-trash-alt"></i> Clear All</button>}
+                        </div>
+                        <div className="logs-list">
+                            {logs.length === 0 ? (
+                                <div className="empty-logs">No energy logs yet. Select an option to start tracking.</div>
+                            ) : (
+                                logs.map(log => (
+                                    <div key={log.id} className="log-item" style={{'--accent-color': log.color}}>
+                                        <div className="log-color" style={{ backgroundColor: log.color, boxShadow: `0 0 8px ${log.color}` }}></div>
+                                        <div className="log-content">
+                                            <div className="log-category">{log.category}</div>
+                                            <div className="log-option">{log.option}</div>
+                                        </div>
+                                        <div className="log-time">{log.time}</div>
+                                        <button className="delete-log-btn" onClick={() => onDeleteLog(log.id)}><i className="fas fa-times"></i></button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        const LogModal = ({ logs, date, onClose }) => {
+            if (!logs || logs.length === 0) return null;
+            
+            // Split logs into feelings and workouts
+            const feelingLogs = logs.filter(log => log.category !== "Workout Suggestion");
+            const workoutLogs = logs.filter(log => log.category === "Workout Suggestion");
+            
+            // Function to generate PDF
+            const generatePDF = () => {
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(20);
+                doc.text(`Energy Log for ${new Date(date).toLocaleDateString()}`, 105, 20, { align: 'center' });
+                
+                // Add feelings section
+                doc.setFontSize(16);
+                doc.text('Feelings:', 20, 40);
+                doc.setFontSize(12);
+                let yPos = 50;
+                
+                feelingLogs.forEach(log => {
+                    doc.text(`${log.category}: ${log.option}`, 25, yPos);
+                    yPos += 10;
+                });
+                
+                // Add workouts section
+                if (workoutLogs.length > 0) {
+                    yPos += 10;
+                    doc.setFontSize(16);
+                    doc.text('Workouts:', 20, yPos);
+                    yPos += 10;
+                    doc.setFontSize(12);
+                    
+                    workoutLogs.forEach(log => {
+                        if (log.details) {
+                            doc.text(log.details.title, 25, yPos);
+                            yPos += 10;
+                            
+                            // Add description
+                            const splitDescription = doc.splitTextToSize(log.details.description, 170);
+                            doc.text(splitDescription, 25, yPos);
+                            yPos += splitDescription.length * 5 + 5;
+                            
+                            // Add steps
+                            doc.text('Steps:', 25, yPos);
+                            yPos += 5;
+                            
+                            log.details.steps.forEach(step => {
+                                const splitStep = doc.splitTextToSize(`- ${step}`, 170);
+                                doc.text(splitStep, 30, yPos);
+                                yPos += splitStep.length * 5 + 2;
+                            });
+                        }
+                    });
+                }
+                
+                return doc;
+            };
+            
+            // Function to download PDF
+            const downloadPDF = () => {
+                const doc = generatePDF();
+                doc.save(`energy-log-${new Date(date).toLocaleDateString().replace(/\//g, '-')}.pdf`);
+            };
+            
+            // Function to share PDF
+            const sharePDF = async () => {
+                try {
+                    const doc = generatePDF();
+                    const pdfBlob = doc.output('blob');
+                    const file = new File([pdfBlob], `energy-log-${new Date(date).toLocaleDateString().replace(/\//g, '-')}.pdf`, { type: 'application/pdf' });
+                    
+                    if (navigator.share && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: 'My Energy Log',
+                            text: 'Check out my energy log for ' + new Date(date).toLocaleDateString(),
+                            files: [file]
+                        });
+                    } else {
+                        // Fallback to download if share API is not available
+                        downloadPDF();
+                        alert('PDF downloaded. You can share it manually.');
+                    }
+                } catch (error) {
+                    console.error('Error sharing PDF:', error);
+                    downloadPDF();
+                }
+            };
+            
+            return (
+                <div className="log-modal-backdrop" onClick={onClose}>
+                    <div className="log-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <button className="log-modal-close" onClick={onClose}><i className="fas fa-times"></i></button>
+                        <h3>Logs for {new Date(date).toLocaleDateString()}</h3>
+                        
+                        {/* Feelings Section */}
+                        {feelingLogs.length > 0 && (
+                            <div className="log-modal-section">
+                                <h4 className="log-modal-section-title">
+                                    <i className="fas fa-heart"></i> Feelings
+                                </h4>
+                                <div className="log-modal-list">
+                                    {feelingLogs.map(log => (
+                                        <div key={log.id} className="log-item" style={{'--accent-color': log.color}}>
+                                            <div className="log-color" style={{ backgroundColor: log.color, boxShadow: `0 0 8px ${log.color}` }}></div>
+                                            <div className="log-content">
+                                                <div className="log-category">{log.category}</div>
+                                                <div className="log-option">{log.option}</div>
+                                            </div>
+                                            <div className="log-time">{log.time}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Workouts Section */}
+                        {workoutLogs.length > 0 && (
+                            <div className="log-modal-section">
+                                <h4 className="log-modal-section-title">
+                                    <i className="fas fa-dumbbell"></i> Workouts
+                                </h4>
+                                <div className="log-modal-list">
+                                    {workoutLogs.map(log => (
+                                        <div key={log.id} className="log-item" style={{'--accent-color': log.color}}>
+                                            <div className="log-color" style={{ backgroundColor: log.color, boxShadow: `0 0 8px ${log.color}` }}></div>
+                                            <div className="log-content">
+                                                <div className="log-category">{log.category}</div>
+                                                <div className="log-option">{log.option}</div>
+                                            </div>
+                                            <div className="log-time">{log.time}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Action Buttons */}
+                        <div className="log-modal-actions">
+                            <button className="log-modal-btn download-btn" onClick={downloadPDF}>
+                                <i className="fas fa-download"></i> Download PDF
+                            </button>
+                            <button className="log-modal-btn share-btn" onClick={sharePDF}>
+                                <i className="fas fa-share-alt"></i> Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        const Calendar = ({ logs, onDayClick }) => {
+            const [date, setDate] = useState(new Date());
+            const changeMonth = (amount) => {
+                setDate(prevDate => new Date(prevDate.getFullYear(), prevDate.getMonth() + amount, 1));
+            };
+            const renderCalendar = () => {
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const today = new Date();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                
+                const days = [];
+                ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach((day, i) => {
+                    days.push(<div key={`wd-${i}`} className="weekday-label">{day}</div>);
+                });
+                for (let i = 0; i < firstDay; i++) {
+                    days.push(<div key={`empty-${i}`} className="calendar-day not-current-month"></div>);
+                }
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const currentDate = new Date(year, month, day);
+                    let classes = "calendar-day";
+                    let style = {};
+                    const logsForDay = logs.filter(log => new Date(log.id).toDateString() === currentDate.toDateString());
+                    const hasLogs = logsForDay.length > 0;
+                    
+                    if (today.toDateString() === currentDate.toDateString()) { classes += " today"; }
+                    if (hasLogs) {
+                        classes += " has-log";
+                        style = { backgroundColor: logsForDay[0].color };
+                    }
+                    
+                    days.push(
+                        <div key={day} className={classes} style={style} onClick={hasLogs ? () => onDayClick(currentDate) : null}>
+                            {day}
+                            {hasLogs && <i className="fas fa-dumbbell calendar-log-icon"></i>}
+                        </div>
+                    );
+                }
+                return days;
+            };
+            return (
+                <div className="calendar-section">
+                    <div className="calendar-container">
+                        <div className="calendar-header">
+                            <button onClick={() => changeMonth(-1)}><i className="fas fa-chevron-left"></i></button>
+                            <h3>{date.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+                            <button onClick={() => changeMonth(1)}><i className="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div className="calendar-grid">
+                            {renderCalendar()}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Enhanced suggestion generator with unique outputs for each combination
+        const generateSuggestion = (selectedOptions, age) => {
+            // Get the selected options
+            const mood = selectedOptions["Current Mood"];
+            const energy = selectedOptions["Energy Level"];
+            const physical = selectedOptions["Physical Sensation"];
+            const cognitive = selectedOptions["Cognitive State"];
+            
+            // Create a unique key based on all selected options
+            const key = `${mood || 'neutral'}-${energy || 'balanced'}-${physical || 'normal'}-${cognitive || 'neutral'}`;
+            
+            // Dynamic description based on selected options
+            let descriptionParts = [];
+            if (mood) descriptionParts.push(`you're feeling ${mood}`);
+            if (energy) descriptionParts.push(`with ${energy} energy`);
+            if (physical) descriptionParts.push(`feeling ${physical} physically`);
+            if (cognitive) descriptionParts.push(`and ${cognitive} cognitively`);
+            
+            const description = `Since ${descriptionParts.join(', ')}, here are personalized exercise recommendations:`;
+            
+            // Generate unique suggestions based on the combination
+            const suggestions = {
+                // Mood-focused combinations
+                "Happy-": {
+                    title: "Mood Enhancement Activities",
+                    steps: [
+                        "Outdoor activities in natural sunlight",
+                        "Social sports or group exercises",
+                        "Dance or movement-based activities",
+                        age < 40 ? "High-energy activities: Zumba, team sports" : "Moderate activities: Walking clubs, golf"
+                    ]
+                },
+                "Sad-": {
+                    title: "Mood Improvement Exercises",
+                    steps: [
+                        "Aerobic exercise to release endorphins",
+                        "Yoga with focus on heart-opening poses",
+                        "Outdoor walking in nature",
+                        age < 50 ? "Running or cycling for mood boost" : "Gentle swimming or tai chi"
+                    ]
+                },
+                "Angry-": {
+                    title: "Anger Management Exercises",
+                    steps: [
+                        "High-intensity interval training (HIIT)",
+                        "Boxing or martial arts",
+                        "Strength training with focus on form",
+                        age < 40 ? "Aggressive sports: Rugby, basketball" : "Controlled activities: Racquetball, tennis"
+                    ]
+                },
+                "Anxious-": {
+                    title: "Anxiety Reduction Exercises",
+                    steps: [
+                        "Rhythmic exercise: Running, swimming, cycling",
+                        "Yoga with focus on breathing",
+                        "Tai chi for mindful movement",
+                        age < 45 ? "Cardiovascular exercise: Running or cycling" : "Low-impact exercise: Walking or water aerobics"
+                    ]
+                },
+                
+                // Energy-focused combinations
+                "Very High-": {
+                    title: "Energy Channeling Activities",
+                    steps: [
+                        "High-intensity interval training (HIIT)",
+                        "Competitive sports or activities",
+                        "Circuit training with minimal rest",
+                        age < 35 ? "Extreme sports or challenging activities" : "Moderate-intensity sports or group activities"
+                    ]
+                },
+                "Low Energy-": {
+                    title: "Energy Boosting Exercises",
+                    steps: [
+                        "Short, brisk walks throughout the day",
+                        "Light stretching or yoga",
+                        "Bodyweight exercises with short sets",
+                        age < 50 ? "Moderate cardio: Cycling or swimming" : "Gentle movement: Walking or chair yoga"
+                    ]
+                },
+                
+                // Physical sensation combinations
+                "Pain Present-": {
+                    title: "Pain-Friendly Exercises",
+                    steps: [
+                        "Water-based exercises: Swimming or water aerobics",
+                        "Gentle stretching or restorative yoga",
+                        "Low-impact cardio: Elliptical or cycling",
+                        age < 60 ? "Physical therapy recommended exercises" : "Chair-based exercises or gentle yoga"
+                    ]
+                },
+                "Relaxed-": {
+                    title: "Maintaining Relaxation",
+                    steps: [
+                        "Gentle yoga or tai chi",
+                        "Leisurely walking in nature",
+                        "Swimming or water-based activities",
+                        age < 50 ? "Light recreational sports: Golf, bowling" : "Gentle movement: Chair yoga, stretching"
+                    ]
+                },
+                
+                // Cognitive state combinations
+                "Focused-": {
+                    title: "Focus-Enhancing Exercises",
+                    steps: [
+                        "Martial arts requiring concentration",
+                        "Rock climbing or bouldering",
+                        "Precision sports: Archery, golf",
+                        age < 45 ? "Complex movement patterns: Dance, gymnastics" : "Strategy-based activities: Chess, strategy games"
+                    ]
+                },
+                "Tired-": {
+                    title: "Gentle Energy Restoration",
+                    steps: [
+                        "Short walks with focus on breathing",
+                        "Gentle stretching or restorative yoga",
+                        "Light movement breaks throughout the day",
+                        age < 60 ? "Low-intensity cardio: Walking, cycling" : "Seated exercises or gentle stretching"
+                    ]
+                },
+                
+                // Two-option combinations
+                "Happy-Very High": {
+                    title: "High-Energy Happiness Activities",
+                    steps: [
+                        "Dance-based fitness classes",
+                        "Team sports or group activities",
+                        "Adventure activities: Hiking, rock climbing",
+                        age < 35 ? "High-intensity group fitness: CrossFit, bootcamp" : "Moderate group activities: Dance classes, hiking groups"
+                    ]
+                },
+                "Sad-Low Energy": {
+                    title: "Gentle Mood Boosting",
+                    steps: [
+                        "Short, gentle walks in pleasant environments",
+                        "Restorative yoga with focus on heart-opening",
+                        "Light stretching with calming music",
+                        age < 60 ? "Gentle swimming or water aerobics" : "Chair yoga or seated stretching"
+                    ]
+                },
+                "Angry-Very High": {
+                    title: "High-Energy Anger Release",
+                    steps: [
+                        "High-intensity interval training (HIIT)",
+                        "Heavy bag boxing or martial arts",
+                        "Sprinting or aggressive running",
+                        age < 40 ? "Contact sports: Boxing, rugby" : "Controlled high-intensity: Racquetball, tennis"
+                    ]
+                },
+                "Anxious-Tense": {
+                    title: "Anxiety and Tension Relief",
+                    steps: [
+                        "Progressive muscle relaxation exercises",
+                        "Yoga with focus on releasing tension",
+                        "Deep breathing with gentle movement",
+                        age < 45 ? "Dynamic stretching or foam rolling" : "Gentle stretching or self-massage"
+                    ]
+                },
+                "Low Energy-Fatigued": {
+                    title: "Gentle Fatigue Management",
+                    steps: [
+                        "Short, frequent movement breaks",
+                        "Gentle stretching throughout the day",
+                        "Mindful walking with focus on breathing",
+                        age < 65 ? "Restorative yoga or gentle tai chi" : "Chair-based exercises or seated stretching"
+                    ]
+                },
+                "Focused-Creative": {
+                    title: "Creative Focus Activities",
+                    steps: [
+                        "Movement-based creative activities: Dance, improvisation",
+                        "Outdoor activities that engage the senses",
+                        "Sports requiring strategic thinking",
+                        age < 45 ? "Complex movement patterns: Parkour, dance" : "Strategy-based activities: Golf, strategy games"
+                    ]
+                },
+                
+                // Three-option combinations
+                "Happy-Very High-Energetic": {
+                    title: "Peak Performance Activities",
+                    steps: [
+                        "High-intensity group fitness classes",
+                        "Competitive team sports",
+                        "Adventure races or obstacle courses",
+                        age < 35 ? "Extreme sports or challenging activities" : "Moderate-intensity competitive sports"
+                    ]
+                },
+                "Sad-Low Energy-Fatigued": {
+                    title: "Gentle Restoration",
+                    steps: [
+                        "Very short, gentle walks in nature",
+                        "Restorative yoga with focus on self-compassion",
+                        "Guided meditation with gentle movement",
+                        age < 65 ? "Gentle water-based activities" : "Chair yoga with breathing focus"
+                    ]
+                },
+                "Angry-Very High-Tense": {
+                    title: "Intense Energy Release",
+                    steps: [
+                        "High-intensity interval training (HIIT)",
+                        "Heavy bag work or martial arts",
+                        "Sprinting or aggressive cardio",
+                        age < 40 ? "Contact sports or intense competition" : "Controlled high-intensity activities"
+                    ]
+                },
+                "Anxious-Tense-Distracted": {
+                    title: "Anxiety and Focus Restoration",
+                    steps: [
+                        "Mindful movement practices: Tai chi, yoga",
+                        "Rhythmic exercise: Running, swimming, cycling",
+                        "Meditation with gentle movement",
+                        age < 50 ? "Outdoor activities in nature" : "Gentle movement with focus on breathing"
+                    ]
+                },
+                
+                // Four-option combinations
+                "Happy-Very High-Energetic-Focused": {
+                    title: "Optimal Performance State",
+                    steps: [
+                        "High-intensity interval training (HIIT)",
+                        "Competitive sports requiring focus",
+                        "Complex movement patterns: Dance, gymnastics",
+                        age < 35 ? "Extreme sports or challenging activities" : "Moderate-intensity strategic sports"
+                    ]
+                },
+                "Sad-Low Energy-Fatigued-Tired": {
+                    title: "Comprehensive Restoration",
+                    steps: [
+                        "Very short, gentle movement breaks",
+                        "Restorative yoga with focus on self-care",
+                        "Guided meditation with gentle movement",
+                        age < 65 ? "Gentle water-based activities" : "Chair yoga with breathing focus"
+                    ]
+                },
+                "Angry-Very High-Tense-Distracted": {
+                    title: "Intense Energy Channeling",
+                    steps: [
+                        "High-intensity interval training (HIIT)",
+                        "Martial arts requiring focus and discipline",
+                        "Complex movement patterns requiring concentration",
+                        age < 40 ? "Contact sports or intense competition" : "Controlled high-intensity activities"
+                    ]
+                },
+                "Anxious-Tense-Distracted-Confused": {
+                    title: "Anxiety and Mental Clarity",
+                    steps: [
+                        "Mindful movement practices: Tai chi, yoga",
+                        "Rhythmic exercise: Running, swimming, cycling",
+                        "Meditation with gentle movement",
+                        age < 50 ? "Outdoor activities in nature" : "Gentle movement with focus on breathing"
+                    ]
+                },
+                
+                // Specific combinations that need unique handling
+                "Happy-Tired": {
+                    title: "Balanced Energy for Happy Fatigue",
+                    description: "Since you're feeling Happy but Tired, here are exercises to maintain your mood while restoring energy:",
+                    steps: [
+                        "Gentle yoga with focus on positive affirmations",
+                        "Short walks in pleasant environments",
+                        "Light stretching with calming music",
+                        age < 50 ? "Moderate swimming or water aerobics" : "Chair yoga with breathing focus"
+                    ]
+                },
+                "Happy-Energetic": {
+                    title: "Channeling Happy Energy",
+                    description: "Since you're feeling Happy and Energetic, here are exercises to channel your positive energy:",
+                    steps: [
+                        "Dance-based fitness classes",
+                        "Team sports or group activities",
+                        "Adventure activities: Hiking, rock climbing",
+                        age < 35 ? "High-intensity group fitness: CrossFit, bootcamp" : "Moderate group activities: Dance classes, hiking groups"
+                    ]
+                },
+                "Sad-Energetic": {
+                    title: "Energy for Mood Improvement",
+                    description: "Since you're feeling Sad but Energetic, here are exercises to use your energy to improve your mood:",
+                    steps: [
+                        "High-intensity cardio to release endorphins",
+                        "Boxing or martial arts for emotional release",
+                        "Running or cycling in nature",
+                        age < 40 ? "Contact sports: Boxing, rugby" : "Controlled high-intensity: Racquetball, tennis"
+                    ]
+                },
+                "Angry-Low Energy": {
+                    title: "Gentle Anger Management",
+                    description: "Since you're feeling Angry with Low Energy, here are gentle exercises to manage anger without exhaustion:",
+                    steps: [
+                        "Gentle stretching with focus on releasing tension",
+                        "Tai chi for mindful movement",
+                        "Deep breathing exercises",
+                        age < 50 ? "Light swimming or water aerobics" : "Chair yoga with breathing focus"
+                    ]
+                },
+                
+                // Default suggestion
+                "default": {
+                    title: "Balanced Energy Activities",
+                    steps: [
+                        "Moderate cardiovascular exercise",
+                        "Strength training with proper form",
+                        "Flexibility and mobility work",
+                        age < 40 ? "Moderate-intensity varied activities" : "Low-impact balanced exercise program"
+                    ]
+                }
+            };
+            
+            // Check for exact matches first
+            if (suggestions[key]) {
+                return {
+                    ...suggestions[key],
+                    description: suggestions[key].description || description
+                };
+            }
+            
+            // Check for partial matches
+            let bestMatch = "default";
+            let matchScore = 0;
+            
+            for (const [suggestionKey, suggestion] of Object.entries(suggestions)) {
+                if (suggestionKey === "default") continue;
+                
+                let score = 0;
+                const keyParts = suggestionKey.split('-');
+                
+                // Check each part of the key
+                for (const part of keyParts) {
+                    if (part && Object.values(selectedOptions).includes(part)) {
+                        score++;
+                    }
+                }
+                
+                if (score > matchScore) {
+                    matchScore = score;
+                    bestMatch = suggestionKey;
+                }
+            }
+            
+            return {
+                ...suggestions[bestMatch],
+                description: suggestions[bestMatch].description || description
+            };
+        };
+        
+        const EnergyVisualizerPage = ({ onColorChange, setSmashEvents }) => {
+            const [logs, setLogs] = useState([]);
+            const [displayColor, setDisplayColor] = useState(document.documentElement.style.getPropertyValue('--accent-color') || '#00FFFF');
+            const [currentEmoji, setCurrentEmoji] = useState('✨');
+            const [emojiKey, setEmojiKey] = useState(Date.now());
+            const [selectedDate, setSelectedDate] = useState(null);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [suggestion, setSuggestion] = useState(null);
+            const [selectedOptions, setSelectedOptions] = useState({});
+            const [age, setAge] = useState('');
+            const [ageError, setAgeError] = useState('');
+            const emojiDisplayRef = useRef(null);
+            
+            useEffect(() => {
+                try {
+                    const savedLogs = localStorage.getItem('elite-logs');
+                    if (savedLogs) setLogs(JSON.parse(savedLogs));
+                } catch(e) { console.error("Could not parse logs from localStorage", e)}
+            }, []);
+            
+            useEffect(() => {
+                localStorage.setItem('elite-logs', JSON.stringify(logs));
+            }, [logs]);
+            
+            const handleOptionSelect = (category, option, color, emoji) => {
+                // Check if this option is already selected
+                if (selectedOptions[category] === option) {
+                    // Deselect the option
+                    const newSelectedOptions = { ...selectedOptions };
+                    delete newSelectedOptions[category];
+                    setSelectedOptions(newSelectedOptions);
+                    
+                    // Remove the log for this option
+                    setLogs(prev => prev.filter(log => !(log.category === category && log.option === option)));
+                    return;
+                }
+                
+                // Update selected options
+                setSelectedOptions(prev => ({
+                    ...prev,
+                    [category]: option
+                }));
+                
+                onColorChange(color);
+                setDisplayColor(color);
+                setCurrentEmoji(emoji);
+                setEmojiKey(Date.now()); 
+                
+                setTimeout(() => {
+                    emojiDisplayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+                const clickX = window.innerWidth / 2;
+                const clickY = window.innerHeight * 0.4;
+                setSmashEvents(prev => [...prev, { x: clickX, y: clickY, id: Date.now(), color }]);
+                const newLog = { 
+                    id: Date.now(), 
+                    category, 
+                    option, 
+                    color, 
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                };
+                setLogs(prev => [newLog, ...prev]);
+            };
+            
+            const handleAgeChange = (value) => {
+                setAge(value);
+                
+                // Clear any previous error
+                setAgeError('');
+                
+                // Validate age range
+                if (value && (parseInt(value) < 5 || parseInt(value) > 120)) {
+                    setAgeError('Please enter a valid age between 5 and 120');
+                }
+            };
+            
+            const handleSuggestExercises = () => {
+                // Validate age
+                if (!age) {
+                    setAgeError('Please enter your age first');
+                    return;
+                }
+                
+                if (parseInt(age) < 5 || parseInt(age) > 120) {
+                    setAgeError('Please enter a valid age between 5 and 120');
+                    return;
+                }
+                
+                // Clear any error
+                setAgeError('');
+                
+                if (Object.keys(selectedOptions).length === 0) {
+                    const newSuggestion = {
+                        title: "General Exercise Recommendations",
+                        description: "Since no specific energy states were selected, here are some general exercise recommendations:",
+                        steps: [
+                            "Cardiovascular exercise: 30 minutes, 3-5 times per week",
+                            "Strength training: 2-3 times per week",
+                            "Flexibility and mobility work: Daily stretching",
+                            parseInt(age) < 40 ? "Moderate to high-intensity varied activities" : "Low-impact balanced exercise program"
+                        ]
+                    };
+                    setSuggestion(newSuggestion);
+                    
+                    // Log the suggestion
+                    const newLog = {
+                        id: Date.now(),
+                        category: "Workout Suggestion",
+                        option: newSuggestion.title,
+                        color: displayColor,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        details: newSuggestion
+                    };
+                    setLogs(prev => [newLog, ...prev]);
+                } else {
+                    // Generate suggestion based on selected options and age
+                    const newSuggestion = generateSuggestion(selectedOptions, parseInt(age));
+                    setSuggestion(newSuggestion);
+                    
+                    // Log the suggestion
+                    const newLog = {
+                        id: Date.now(),
+                        category: "Workout Suggestion",
+                        option: newSuggestion.title,
+                        color: displayColor,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        details: newSuggestion
+                    };
+                    setLogs(prev => [newLog, ...prev]);
+                }
+                
+                // Scroll to suggestion section
+                setTimeout(() => {
+                    document.querySelector('.suggestion-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            };
+            
+            const handleDayClick = (date) => {
+                const logsForDay = logs.filter(log => new Date(log.id).toDateString() === date.toDateString());
+                if (logsForDay.length > 0) {
+                    setSelectedDate(date);
+                    setIsModalOpen(true);
+                }
+            };
+            const closeModal = () => setIsModalOpen(false);
+            return (
+                <main>
+                    <section id="energy-visualizer-page">
+                        <div className="container">
+                            <div className="section-header">
+                                <h2>Elite Energy Visualizer</h2>
+                                <p>Visualize your energy field. Select your states below and click "Suggest Exercises" for personalized recommendations.</p>
+                            </div>
+                            <div ref={emojiDisplayRef}>
+                                <EmojiDisplay emoji={currentEmoji} color={displayColor} key={emojiKey} />
+                            </div>
+                            <DynamicInputs 
+                                onOptionSelect={handleOptionSelect} 
+                                selectedOptions={selectedOptions}
+                                onAgeChange={handleAgeChange}
+                                age={age}
+                                ageError={ageError}
+                                onSuggestExercises={handleSuggestExercises}
+                            />
+                            <SuggestionSection suggestion={suggestion} />
+                            <LogsSection 
+                                logs={logs} 
+                                onClearLogs={() => setLogs([])} 
+                                onDeleteLog={(id) => setLogs(logs.filter(l => l.id !== id))} 
+                            />
+                            <Calendar logs={logs} onDayClick={handleDayClick} />
+                        </div>
+                    </section>
+                    {isModalOpen && <LogModal logs={logs.filter(l => new Date(l.id).toDateString() === selectedDate.toDateString())} date={selectedDate} onClose={closeModal} />}
+                    <footer className="footer">
+                        <div className="container">
+                            <p>&copy; 2025 Elite Visualizer. Engineered for Champions.</p>
+                        </div>
+                    </footer>
+                </main>
+            );
+        };
+        
+        // --- MAIN APP COMPONENT ---
+        const App = () => {
+            const [smashEvents, setSmashEvents] = useState([]);
+            const [currentColor, setCurrentColor] = useState('#00FFFF');
+            const [userName, setUserName] = useState('Athlete'); // Default username
+            
+            // Automatically get username from localStorage on load
+            useEffect(() => {
+                const storedName = localStorage.getItem('userName');
+                if (storedName) {
+                    setUserName(storedName);
+                }
+            }, []);
+            
+            // Handle user logout
+            const handleLogout = () => {
+                localStorage.removeItem('userName');
+                // Redirect to the main login page, assuming it's index.html
+                window.location.href = 'index.html';
+            };
+            
+            const shatterSound = useMemo(() => {
+                if (typeof Tone === 'undefined') return null;
+                const noise = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0 } }).toDestination();
+                const synth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0.1, release: 0.2 } }).toDestination();
+                synth.volume.value = -12;
+                return { noise, synth };
+            }, []);
+            
+            const handleColorChange = (color) => {
+                document.documentElement.style.setProperty('--accent-color', color);
+                document.documentElement.style.setProperty('--border-subtle', `${color}26`);
+                document.documentElement.style.setProperty('--primary-gradient', `linear-gradient(135deg, ${color} 0%, #0099CC 100%)`);
+                setCurrentColor(color);
+            };
+            
+            const handleSmash = useCallback((e) => {
+                const el = document.elementFromPoint(e.clientX, e.clientY);
+                if (el && (el.tagName === 'A' || el.tagName === 'BUTTON' || el.closest('.input-option') || el.closest('.suggest-button'))) return;
+                setSmashEvents(prev => [...prev, { x: e.clientX, y: e.clientY, id: Date.now(), color: currentColor }]);
+                if (!shatterSound) return;
+                try {
+                    Tone.start();
+                    shatterSound.noise.triggerAttack();
+                    shatterSound.synth.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '8n');
+                } catch(e) { console.error("Audio error:", e); }
+            }, [shatterSound, currentColor]);
+            
+            useEffect(() => {
+                document.addEventListener('click', handleSmash);
+                return () => document.removeEventListener('click', handleSmash);
+            }, [handleSmash]);
+            
+            return (
+                <>
+                    <CustomCursor color={currentColor} />
+                    <AmbientGlow color={currentColor} />
+                    <ParticleBackground />
+                    <LoadingScreen />
+                    <Header 
+                        userName={userName} 
+                        onLogout={handleLogout} 
+                    />
+                    <SmashEffectContainer smashEvents={smashEvents} />
+                    <EnergyVisualizerPage 
+                        onColorChange={handleColorChange} 
+                        setSmashEvents={setSmashEvents} 
+                    />
+                </>
+            );
+        };
+        
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>

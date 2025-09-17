@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Workout Generator | Elite Performance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+     <link rel="shortcut icon" type="image/jpeg" href="logo.jpg" />
+    <style>
+        /* ========================================================================
+           GLOBAL STYLES & UTILITIES
+           ======================================================================== */
+        :root {
+            /* Background and Color Palette - Cyan Version (Reduced Intensity) */
+            --bg-dark: #000000;
+            --bg-darker: #050505;
+            --bg-medium: #000000;
+            --bg-card: rgba(0, 0, 0, 0.8);
+            --text-white: #f0f0f0;
+            --text-light-gray: #d0d0d0;
+            --text-secondary: #c0c0c0;
+            --text-primary: #FFFFFF;
+            /* Accent colors - Cyan (Reduced Intensity) */
+            --accent-color: #06f9f9;
+            --border-color: #0ae5edf8;
+            --border-subtle: rgba(5, 242, 242, 0.916);
+            /* Gradients - Cyan (Reduced Intensity) */
+            --primary-gradient: linear-gradient(135deg, var(--accent-color) 0%, #00CCCC 100%);
+            --bg-glow-color: rgba(0, 255, 255, 0.15);
+            /* Typography */
+            --font-primary: 'Montserrat', sans-serif;
+            --font-secondary: 'Roboto Condensed', sans-serif;
+            /* Visual Effects */
+            --box-shadow: 0 10px 30px rgba(56, 239, 239, 0.847);
+        }
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            user-select: none;
+            cursor: none !important;
+        }
+        html { scroll-behavior: smooth; font-size: 16px; }
+        body {
+            font-family: var(--font-primary);
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            background-attachment: fixed;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 2rem; }
+        
+        /* ========== DYNAMIC BACKGROUND ========== */
+        #particle-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -10; }
+        /* Custom Cursor */
+        .custom-cursor { position: fixed; width: 40px; height: 40px; z-index: 10001; pointer-events: none; transform: translate(-50%, -50%); transition: transform 0.1s ease; }
+        .dumbbell-cursor { font-size: 40px; color: var(--accent-color); animation: rotate 3s linear infinite; filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.6)); }
+        /* ========== LOADING SCREEN ========== */
+        .loading-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; display: flex; align-items: center; justify-content: center; z-index: 10001; transition: opacity 0.5s ease-out; }
+        .loading-container { text-align: center; position: relative; width: 100%; max-width: 500px; }
+        .loading-animation { position: relative; width: 200px; height: 200px; margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; }
+        .loading-icon { font-size: 3rem; color: #00FFFF; animation: pulse-grow 1.5s ease-in-out infinite; position: relative; z-index: 1; }
+        .loading-circle { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid transparent; border-top-color: #00FFFF; transform: rotate(0deg); animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; }
+        .loading-circle::before { content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: #00FFFF; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px #00FFFF; }
+        .loading-circle-alt { position: absolute; width: 80%; height: 80%; border-radius: 50%; border: 3px solid transparent; border-bottom-color: #F72585; transform: rotate(0deg) scale(0.8); animation: spin-reverse 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; }
+        .loading-text h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(135deg, #00FFFF 0%, #0099CC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px; }
+        .loading-text p { color: #B0B0B0; font-style: italic; margin-bottom: 2rem; font-size: 1.2rem; }
+        .loading-progress { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+        .loading-bar { width: 8px; height: 30px; background: linear-gradient(135deg, #00FFFF 0%, #0099CC 100%); border-radius: 4px; animation: loadingPulse 1.4s ease-in-out infinite; }
+        .loading-bar:nth-child(2) { animation-delay: 0.2s; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); }
+        .loading-bar:nth-child(3) { animation-delay: 0.4s; background: linear-gradient(135deg, #F72585 0%, #C77DFF 100%); }
+        .loading-bar:nth-child(4) { animation-delay: 0.6s; background: linear-gradient(135deg, #00FFFF 0%, #0099CC 100%); }
+        .loading-bar:nth-child(5) { animation-delay: 0.8s; background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); }
+        /* ========== SMASH EFFECTS ========== */
+        .smash-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10000; }
+        .smash-particle { position: absolute; font-size: 16px; pointer-events: none; animation: smash 0.8s ease-out forwards; filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.7)); }
+        .glass-break { position: absolute; pointer-events: none; animation: glassBreak 0.8s ease-out forwards; }
+        .glass-shard { position: absolute; background: linear-gradient(45deg, rgba(255, 255, 255, 0.8), rgba(0, 255, 255, 0.5)); pointer-events: none; animation: shardFly 1s ease-out forwards; box-shadow: 0 0 8px rgba(0, 255, 255, 0.7); }
+        /* ========== PARTICLE GLOW BACKGROUND ========== */
+        .particles-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: hidden; }
+        .particle { position: absolute; background: var(--accent-color); border-radius: 50%; animation: float-particle 25s infinite linear; box-shadow: 0 0 5px rgba(0, 255, 255, 0.8), 0 0 10px rgba(0, 255, 255, 0.5); opacity: 0.6; }
+        
+        /* ========================================================================
+           HEADER
+           ======================================================================== */
+        .header { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-subtle); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(-100%); opacity: 0; animation: slideDown 0.8s ease 3.5s forwards; }
+        .header-content { display: flex; align-items: center; justify-content: space-between; height: 80px; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; font-size: 1.8rem; font-weight: 800; color: var(--text-primary); cursor: none; transition: all 0.3s ease; text-decoration: none; }
+        .logo:hover { transform: scale(1.03); }
+        .logo-icon { width: 2.5rem; height: 2.5rem; color: var(--accent-color); animation: pulse 2s infinite; filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5)); }
+        .nav { display: flex; align-items: center; gap: 2rem; }
+        .profile-dropdown { position: relative; }
+        .profile-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: var(--primary-gradient); border: none; border-radius: 50px; color: var(--bg-dark); font-size: 0.95rem; font-weight: 600; cursor: none; transition: all 0.3s ease; }
+        .profile-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 255, 255, 0.4); }
+        .profile-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; color: var(--accent-color); }
+        .dropdown-menu { position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: rgba(15, 31, 31, 0.9); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; min-width: 200px; opacity: 0; transform: translateY(-10px); transition: all 0.3s ease; pointer-events: none; z-index: 1000; }
+        .dropdown-menu.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .dropdown-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: var(--text-secondary); text-decoration: none; transition: all 0.2s ease; }
+        .dropdown-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
+        .dropdown-divider { height: 1px; background: var(--border-subtle); margin: 0.5rem 0; }
+        .mobile-menu-toggle { display: none; background: none; border: none; color: var(--text-primary); cursor: none; padding: 0.5rem; font-size: 1.5rem; }
+        
+        /* ========================================================================
+           WORKOUT GENERATOR & MAIN CONTENT
+           ======================================================================== */
+        .page-content { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 100px 0 60px; }
+        .workout-container { position: relative; width: 95%; max-width: 1200px; padding: 40px; background-color: var(--bg-card); backdrop-filter: blur(10px); border-radius: 10px; border: 1px solid var(--border-color); box-shadow: var(--box-shadow); overflow: hidden; opacity: 0; transform: translateY(30px); margin-bottom: 30px; transition: opacity 1s ease-out, transform 1s ease-out, border-color 0.3s ease, box-shadow 0.3s ease; will-change: transform; }
+        .workout-container.visible { opacity: 1; transform: translateY(0); }
+        h1 { font-family: var(--font-secondary); font-size: clamp(2rem, 5vw, 3rem); text-align: center; margin-bottom: 24px; background-image: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { text-align: center; color: var(--text-light-gray); margin-bottom: 32px; }
+        
+        /* ========== NEW "FLOATING BUBBLE" SELECTION SYSTEM ========== */
+        .form-group { text-align: center; margin-bottom: 2.5rem; }
+        .form-group h3 { font-weight: 600; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .bubble-container { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 20px; }
+        .selection-bubble { position: relative; width: 110px; height: 110px; border-radius: 50%; background-color: var(--bg-medium); border: 2px solid var(--border-color); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: float-bubble 8s ease-in-out infinite; }
+        .selection-bubble:hover { animation-play-state: paused; transform: scale(1.1); border-color: var(--accent-color); box-shadow: 0 0 20px rgba(0, 255, 255, 0.4); }
+        .selection-bubble.selected { background: var(--primary-gradient); border-color: var(--accent-color); box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); animation: none; transform: scale(1.1); }
+        .selection-icon { font-size: 2.2rem; color: var(--accent-color); transition: all 0.3s ease; }
+        .selection-label { font-size: 0.9rem; font-weight: 500; color: var(--text-light-gray); transition: all 0.3s ease; }
+        .selection-bubble.selected .selection-icon, .selection-bubble.selected .selection-label { color: var(--bg-dark); font-weight: 700; text-shadow: none; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group input.number-input { width: 100%; max-width: 400px; margin: 0 auto; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-medium); color: var(--text-white); font-family: var(--font-primary); font-size: 1rem; text-align: center; transition: all 0.3s ease; }
+        
+        .btn-group { display: flex; gap: 15px; margin-top: 20px; }
+        .btn, .btn-secondary, .btn-clear-history { flex-grow: 1; font-family: var(--font-secondary); font-weight: 700; padding: 14px 20px; border-radius: 9999px; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px; border: 2px solid transparent; cursor: none; background-color: #00FFFF; color: var(--bg-medium); box-shadow: 0 0 10px rgba(0, 255, 255, 0.7); position: relative; overflow: hidden; z-index: 1; }
+        .btn:hover, .btn-secondary:hover, .btn-clear-history:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(0, 255, 255, 0.6); }
+        .btn::after, .btn-secondary::after, .btn-clear-history::after { content: ''; position: absolute; top: 50%; left: 50%; width: 5px; height: 5px; background: rgba(255, 255, 255, 0.5); opacity: 0; border-radius: 100%; transform: scale(1, 1) translate(-50%); transform-origin: 50% 50%; z-index: -1; }
+        .btn:hover::after, .btn-secondary:hover::after, .btn-clear-history:hover::after { animation: ripple 1s ease-out; }
+        #workout-list li { background-color: var(--bg-card); padding: 12px; margin-bottom: 10px; border-radius: 5px; border-left: 3px solid var(--accent-color); transition: all 0.3s ease; list-style: none; border: 1px solid transparent; position: relative; overflow: hidden; }
+        #workout-list li:hover { transform: translateX(3px); border-color: var(--accent-color); box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3); }
+        #timer { text-align: center; font-size: 2rem; font-weight: 700; margin-top: 20px; color: var(--accent-color); display: none; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding: 10px; border-radius: 8px; border: 1px solid transparent; transition: border-color 0.3s ease, box-shadow 0.3s ease; }
+        .log-history-item { margin-bottom: 20px; padding: 15px; background-color: var(--bg-card); border-radius: 8px; border-left: 3px solid var(--accent-color); transition: all 0.3s ease; border: 1px solid var(--border-color); }
+        .log-history-item:hover { transform: translateY(-3px); box-shadow: 0 15px 30px -8px rgba(0, 0, 0, 0.2); border-color: var(--accent-color); }
+        .empty-history-message { text-align: center; color: var(--text-light-gray); font-style: italic; }
+        /* Restored Hover Effects */
+        .dumbbell-hover { border-color: var(--accent-color) !important; box-shadow: 0 0 15px rgba(0, 255, 255, 0.7) !important; }
+        .text-bright { color: var(--text-white) !important; text-shadow: 0 0 10px rgba(0, 255, 255, 0.8) !important; transition: all 0.3s ease; }
+        /* Custom Notification Bar */
+        #notification-bar { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); padding: 1rem 2rem; background: var(--primary-gradient); color: var(--bg-dark); border-radius: 0 0 10px 10px; box-shadow: 0 5px 15px rgba(0,255,255,0.3); z-index: 10002; transition: top 0.5s ease-in-out; font-weight: 600; }
+        #notification-bar.show { top: 0; }
+        
+        /* ========================================================================
+           ANIMATIONS
+           ======================================================================== */
+        @keyframes float-bubble { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-8px) rotate(5deg); } 50% { transform: translateY(0) rotate(0deg); } 75% { transform: translateY(8px) rotate(-5deg); } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes glassBreak { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+        @keyframes shardFly { 0% { transform: translate(0, 0) rotate(0deg); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rotation)); opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes smash { 0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(720deg); opacity: 0; } }
+        @keyframes float-particle { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 0.6; } 90% { opacity: 0.6; } 100% { transform: translateY(-100vh) translateX(100px); opacity: 0; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin-reverse { from { transform: rotate(0deg) scale(0.8); } to { transform: rotate(-360deg) scale(0.8); } }
+        @keyframes pulse-grow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes loadingPulse { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
+        @keyframes ripple { 0% { transform: scale(0, 0); opacity: 0.5; } 100% { transform: scale(20, 20); opacity: 0; } }
+        .scroll-animate { opacity: 0; transition: opacity 0.8s ease, transform 0.8s ease; }
+        .scroll-animate.from-bottom { transform: translateY(100px); }
+        .scroll-animate.visible { opacity: 1; transform: translate(0, 0); }
+        /* ========================================================================
+           RESPONSIVE DESIGN
+           ======================================================================== */
+        @media (max-width: 1200px) { }
+        @media (max-width: 968px) { .nav { position: fixed; top: 80px; left: 0; width: 100%; height: calc(100vh - 80px); background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px); flex-direction: column; justify-content: center; gap: 2rem; transform: translateX(-100%); transition: transform 0.3s ease; } .nav.nav-open { transform: translateX(0); } .mobile-menu-toggle { display: block; } .btn-group { flex-direction: column; } }
+        @media (max-width: 768px) { .workout-container { width: 98%; padding: 20px; } }
+        @media (max-width: 640px) { .container { padding: 0 1rem; } .selection-bubble { width: 90px; height: 90px; } .selection-icon { font-size: 1.8rem; } }
+    </style>
+</head>
+<body>
+    <canvas id="particle-background"></canvas>
+    <div id="notification-bar"></div>
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-container">
+            <div class="loading-animation">
+                <div class="loading-circle"></div>
+                <div class="loading-circle-alt"></div>
+                <i class="fas fa-dumbbell loading-icon"></i>
+            </div>
+            <div class="loading-text">
+                <h2>ELITE PERFORMANCE</h2>
+                <p>"Champions are made when nobody's watching"</p>
+            </div>
+            <div class="loading-progress">
+                <div class="loading-bar"></div>
+                <div class="loading-bar"></div>
+                <div class="loading-bar"></div>
+                <div class="loading-bar"></div>
+                <div class="loading-bar"></div>
+            </div>
+        </div>
+    </div>
+    <div id="main-content" style="opacity: 0; transition: opacity 0.5s;">
+        <div class="particles-container"></div>
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <a href="plan.html" class="logo">
+                        <i class="fas fa-dumbbell logo-icon"></i>
+                        <span>ELITE</span>
+                    </a>
+                    <nav class="nav">
+                        <div class="profile-dropdown">
+                            <button class="profile-btn" id="profileBtn">
+                                <div class="profile-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span id="userName">Athlete</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="dropdown-menu" id="dropdownMenu">
+                                <div class="dropdown-divider"></div>
+                                <a href="index.html" class="dropdown-item" id="logoutBtn">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    Logout
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
+                    <button class="mobile-menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        <div id="workout-page" class="page-content">
+            <div id="form-container" class="workout-container scroll-animate from-bottom">
+                <h1>Interactive Workout Generator</h1>
+                <p>Power-up your choices to create a customized workout plan.</p>
+                <form id="workout-form">
+                    <div class="form-group">
+                        <h3><i class="fas fa-bullseye"></i> Goal</h3>
+                        <div class="bubble-container" id="goal-selector">
+                            <div class="selection-bubble" data-value="strength"><i class="fas fa-weight-hanging selection-icon"></i><span class="selection-label">Strength</span></div>
+                            <div class="selection-bubble" data-value="endurance"><i class="fas fa-person-running selection-icon"></i><span class="selection-label">Endurance</span></div>
+                            <div class="selection-bubble" data-value="hypertrophy"><i class="fas fa-bolt selection-icon"></i><span class="selection-label">Muscle</span></div>
+                            <div class="selection-bubble" data-value="flexibility"><i class="fas fa-spa selection-icon"></i><span class="selection-label">Flexibility</span></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <h3><i class="fas fa-trophy"></i> Fitness Level</h3>
+                         <div class="bubble-container" id="level-selector">
+                            <div class="selection-bubble" data-value="beginner"><i class="fas fa-seedling selection-icon"></i><span class="selection-label">Beginner</span></div>
+                            <div class="selection-bubble" data-value="intermediate"><i class="fas fa-chart-line selection-icon"></i><span class="selection-label">Intermediate</span></div>
+                            <div class="selection-bubble" data-value="advanced"><i class="fas fa-crown selection-icon"></i><span class="selection-label">Advanced</span></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <h3><i class="fas fa-tools"></i> Equipment</h3>
+                        <div class="bubble-container" id="equipment-selector">
+                            <div class="selection-bubble" data-value="bodyweight"><i class="fas fa-child selection-icon"></i><span class="selection-label">Bodyweight</span></div>
+                            <div class="selection-bubble" data-value="dumbbells"><i class="fas fa-dumbbell selection-icon"></i><span class="selection-label">Dumbbells</span></div>
+                            <div class="selection-bubble" data-value="resistance-bands"><i class="fas fa-ribbon selection-icon"></i><span class="selection-label">Bands</span></div>
+                            <div class="selection-bubble" data-value="full-gym"><i class="fas fa-building-columns selection-icon"></i><span class="selection-label">Full Gym</span></div>
+                            <div class="selection-bubble" data-value="random"><i class="fas fa-dice selection-icon"></i><span class="selection-label">Randomize</span></div>
+                        </div>
+                    </div>
+                     <div class="form-group">
+                        <h3><i class="fas fa-tasks"></i> Workout Mode</h3>
+                        <div class="bubble-container" id="mode-selector">
+                           <div class="selection-bubble" data-value="sets-reps"><i class="fas fa-repeat selection-icon"></i><span class="selection-label">Sets & Reps</span></div>
+                           <div class="selection-bubble" data-value="circuit"><i class="fas fa-circle-nodes selection-icon"></i><span class="selection-label">Circuit</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <h3><i class="fas fa-stopwatch"></i> Set Workout Timer (minutes)</h3>
+                        <input type="number" id="timer-minutes" value="30" min="5" max="180" class="number-input" />
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" id="generate-btn" class="btn">Generate Workout</button>
+                        <button type="button" id="shuffle-btn" class="btn btn-secondary">Shuffle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div id="workout-output-page" class="page-content" style="display: none;">
+            <div id="workout-output-container" class="workout-container scroll-animate from-bottom">
+                <h3 id="workout-heading">Your Custom Workout:</h3>
+                <ul id="workout-list"></ul>
+                <div class="btn-group">
+                    <button id="log-workout" class="btn">Log This Workout</button>
+                    <button id="reset-btn" class="btn">Reset</button>
+                </div>
+                <div id="timer" style="display: none;">00:00</div>
+                <div class="btn-group" id="timer-controls" style="display: none;">
+                    <button id="start-timer" class="btn">Start Timer</button>
+                    <button id="stop-timer" class="btn" style="display:none">Stop Timer</button>
+                </div>
+                <div class="btn-group" style="margin-top: 40px;">
+                    <button id="back-to-form-btn" class="btn">Back to Generator</button>
+                </div>
+            </div>
+        </div>
+        <div id="history-page" class="page-content">
+            <div id="history-container" class="workout-container scroll-animate from-bottom">
+                <div class="log-history-header">
+                    <h2>Workout History </h2>
+                </div>
+                <div class="log-history-content">
+                    <div id="workout-history">
+                        <p class="empty-history-message">No workouts logged yet. Generate and log your first one!</p>
+                    </div>
+                    <div class="btn-group">
+                        <button id="clear-history-btn" class="btn btn-clear-history">Clear History</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="custom-cursor">
+        <i class="fas fa-dumbbell dumbbell-cursor"></i>
+    </div>
+    <div class="smash-container"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- ELEMENT SELECTIONS ---
+            const mainContent = document.getElementById('main-content');
+            const loadingScreen = document.getElementById('loading-screen');
+            const customCursor = document.querySelector('.custom-cursor');
+            const smashContainer = document.querySelector('.smash-container');
+            const particleBg = document.querySelector('.particles-container');
+            const form = document.getElementById('workout-form');
+            const shuffleButton = document.getElementById('shuffle-btn');
+            const resetButton = document.getElementById('reset-btn');
+            const workoutList = document.getElementById('workout-list');
+            const workoutHeading = document.getElementById('workout-heading');
+            const workoutOutputPage = document.getElementById('workout-output-page');
+            const logButton = document.getElementById('log-workout');
+            const workoutHistory = document.getElementById('workout-history');
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
+            const timerDisplay = document.getElementById('timer');
+            const timerControls = document.getElementById('timer-controls');
+            const startTimerBtn = document.getElementById('start-timer');
+            const stopTimerBtn = document.getElementById('stop-timer');
+            const backToFormBtn = document.getElementById('back-to-form-btn');
+            const notificationBar = document.getElementById('notification-bar');
+            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+            const nav = document.querySelector('.nav');
+            const profileBtn = document.getElementById('profileBtn');
+            const dropdownMenu = document.getElementById('dropdownMenu');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userNameSpan = document.getElementById('userName');
+            
+            // --- STATE VARIABLES ---
+            let timerInterval;
+            let currentSeconds;
+            const smashIcons = ['fas fa-dumbbell', 'fas fa-running', 'fas fa-bicycle', 'fas fa-swimmer', 'fas fa-fist-raised'];
+            const clickSound = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-sci-fi-click-657.mp3");
+            const breakSound = new Audio("click.mp3.wav");
+            const alarmSound = new Audio("clock.mp3.wav");
+            
+            // --- INITIALIZATION ---
+            // Loading Screen & Content Fade-in
+            setTimeout(() => {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    mainContent.style.opacity = 1;
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) entry.target.classList.add('visible');
+                        });
+                    }, { threshold: 0.1 });
+                    document.querySelectorAll('.scroll-animate').forEach(el => observer.observe(el));
+                }, 500);
+            }, 3500);
+            
+            // Profile & Nav Logic
+            const storedName = localStorage.getItem('userName');
+            if (storedName) {
+                userNameSpan.textContent = storedName;
+            }
+            profileBtn.addEventListener('click', () => dropdownMenu.classList.toggle('active'));
+            document.addEventListener('click', (e) => {
+                if (!profileBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.remove('active');
+                }
+            });
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('userName');
+                window.location.href = 'index.html';
+            });
+            mobileMenuToggle.addEventListener('click', function() {
+                nav.classList.toggle('nav-open');
+                const icon = mobileMenuToggle.querySelector('i');
+                icon.className = nav.classList.contains('nav-open') ? 'fas fa-times' : 'fas fa-bars';
+            });
+
+            // Floating Bubble Selector Logic
+            function setupBubbleSelectors() {
+                document.querySelectorAll('.bubble-container').forEach(container => {
+                    container.firstElementChild.classList.add('selected');
+                    const bubbles = container.querySelectorAll('.selection-bubble');
+                    bubbles.forEach((bubble, index) => {
+                         bubble.style.animationDelay = `${index * 0.4}s`;
+                    });
+                    container.addEventListener('click', (e) => {
+                        const clickedBubble = e.target.closest('.selection-bubble');
+                        if (!clickedBubble) return;
+                        container.querySelectorAll('.selection-bubble').forEach(b => b.classList.remove('selected'));
+                        clickedBubble.classList.add('selected');
+                    });
+                });
+            }
+            setupBubbleSelectors();
+            
+            // Background Particles
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 5 + 2;
+                particle.style.cssText = `width:${size}px; height:${size}px; left:${Math.random()*100}vw; top:${Math.random()*100}vh; animation-delay:${Math.random()*25}s; animation-duration:${Math.random()*20+15}s;`;
+                particleBg.appendChild(particle);
+            }
+            
+            // Canvas particle background - Enhanced
+            const canvas = document.getElementById('particle-background');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            let particlesArray = [];
+            const numberOfParticles = 60;
+            let mouse = { x: null, y: null };
+            window.addEventListener('mousemove', (event) => {
+                mouse.x = event.x;
+                mouse.y = event.y;
+            });
+            
+            class Particle {
+                constructor(x, y, size, color, weight) {
+                    this.x = x; this.y = y; this.size = size; this.color = color; this.weight = weight;
+                    this.baseX = this.x; this.baseY = this.y;
+                }
+                draw() {
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false); ctx.fillStyle = this.color; ctx.fill();
+                }
+                update() {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let forceDirectionX = dx / distance;
+                    let forceDirectionY = dy / distance;
+                    let maxDistance = 100;
+                    let force = (maxDistance - distance) / maxDistance;
+                    let directionX = forceDirectionX * force * this.size;
+                    let directionY = forceDirectionY * force * this.size;
+                    if (distance < maxDistance) {
+                        this.x -= directionX;
+                        this.y -= directionY;
+                    } else {
+                        if (this.x !== this.baseX) {
+                            let dx = this.x - this.baseX;
+                            this.x -= dx/10;
+                        }
+                        if (this.y !== this.baseY) {
+                            let dy = this.y - this.baseY;
+                            this.y -= dy/10;
+                        }
+                    }
+                }
+            }
+            
+            function init() {
+                particlesArray = [];
+                for (let i = 0; i < numberOfParticles; i++) {
+                    const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; const size = (Math.random() * 5) + 1; const color = `rgba(0, 255, 255, ${Math.random() * 0.5 + 0.2})`; const weight = 1;
+                    particlesArray.push(new Particle(x, y, size, color, weight));
+                }
+            }
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particlesArray.forEach(p => { p.update(); p.draw(); });
+                requestAnimationFrame(animate);
+            }
+            
+            init(); animate();
+            const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; init(); };
+            window.addEventListener('resize', handleResize);
+            
+            // Ambient Glow Effect - Enhanced
+            const glowElement = document.getElementById('ambient-glow');
+            const handleMouseMove = (e) => {
+                glowElement.style.setProperty('--x', `${e.clientX}px`);
+                glowElement.style.setProperty('--y', `${e.clientY}px`);
+            };
+            window.addEventListener('mousemove', handleMouseMove);
+            
+            // --- INTERACTIVITY & EFFECTS ---
+            
+            document.body.addEventListener('mousemove', e => {
+                customCursor.style.left = `${e.clientX}px`;
+                customCursor.style.top = `${e.clientY}px`;
+            });
+            
+            document.body.addEventListener('click', e => {
+                clickSound.currentTime = 0; clickSound.play().catch(()=>{});
+                breakSound.currentTime = 0; breakSound.play().catch(()=>{});
+                
+                // Create glass breaking effect
+                const glassBreak = document.createElement('div');
+                glassBreak.className = 'glass-break';
+                glassBreak.style.left = `${e.clientX - 75}px`;
+                glassBreak.style.top = `${e.clientY - 75}px`;
+                glassBreak.style.width = '150px';
+                glassBreak.style.height = '150px';
+                glassBreak.style.borderRadius = '50%';
+                glassBreak.style.background = 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(0, 255, 255, 0.7) 50%, transparent 70%)';
+                smashContainer.appendChild(glassBreak);
+                
+                // Create glass shards
+                for (let i = 0; i < 25; i++) {
+                    const shard = document.createElement('div');
+                    shard.className = 'glass-shard';
+                    shard.style.left = `${e.clientX}px`;
+                    shard.style.top = `${e.clientY}px`;
+                    shard.style.width = `${Math.random() * 15 + 5}px`;
+                    shard.style.height = `${Math.random() * 20 + 8}px`;
+                    const tx = (Math.random() - 0.5) * 150;
+                    const ty = (Math.random() - 0.5) * 150;
+                    const rotation = (Math.random() - 0.5) * 360;
+                    const duration = Math.random() * 0.8 + 0.8;
+                    shard.style.setProperty('--tx', `${tx}px`);
+                    shard.style.setProperty('--ty', `${ty}px`);
+                    shard.style.setProperty('--rotation', `${rotation}deg`);
+                    shard.style.animationDuration = `${duration}s`;
+                    smashContainer.appendChild(shard);
+                    setTimeout(() => shard.remove(), duration * 1000);
+                }
+                
+                // Create smash particles
+                for (let i = 0; i < 15; i++) {
+                    const p = document.createElement('i');
+                    p.className = `smash-particle ${smashIcons[Math.floor(Math.random() * smashIcons.length)]}`;
+                    p.style.left = `${e.clientX}px`; p.style.top = `${e.clientY}px`;
+                    p.style.setProperty('--tx', `${(Math.random() - 0.5) * 150}px`);
+                    p.style.setProperty('--ty', `${(Math.random() - 0.5) * 150}px`);
+                    smashContainer.appendChild(p);
+                    setTimeout(() => p.remove(), 800);
+                }
+                
+                // Remove glass break effect after animation
+                setTimeout(() => {
+                    if (glassBreak) glassBreak.remove();
+                }, 1000);
+            });
+            
+            const interactiveElements = document.querySelectorAll('input, button, .selection-bubble, .social-link');
+            interactiveElements.forEach(el => {
+                el.addEventListener('mouseenter', () => el.classList.add('dumbbell-hover'));
+                el.addEventListener('mouseleave', () => el.classList.remove('dumbbell-hover'));
+            });
+            const textElements = document.querySelectorAll('h1, h2, h3, p, label, li, a, span');
+            textElements.forEach(el => {
+                el.addEventListener('mouseenter', () => { if (!el.closest('.btn, .selection-bubble.selected')) el.classList.add('text-bright'); });
+                el.addEventListener('mouseleave', () => el.classList.remove('text-bright'));
+            });
+            
+            // Interactive Glow Effect on Hover
+            const containers = document.querySelectorAll('.workout-container');
+            containers.forEach(container => {
+                container.addEventListener('mousemove', e => {
+                    const rect = container.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    container.style.setProperty('--mouse-x', `${x}px`);
+                    container.style.setProperty('--mouse-y', `${y}px`);
+                });
+            });
+            
+            // 3D Tilt Effect for Workout Containers
+            containers.forEach(container => {
+                container.addEventListener('mousemove', (e) => {
+                    if (container.classList.contains('visible')) {
+                        const rect = container.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        const rotateY = ((x / rect.width) - 0.5) * 5;
+                        const rotateX = ((y / rect.height) - 0.5) * -5;
+                        
+                        container.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+                    }
+                });
+                
+                container.addEventListener('mouseleave', () => {
+                    if (container.classList.contains('visible')) {
+                        container.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                    }
+                });
+            });
+            
+            // --- UTILITY FUNCTIONS ---
+            function showNotification(message, duration = 3000) {
+                notificationBar.textContent = message;
+                notificationBar.classList.add('show');
+                setTimeout(() => {
+                    notificationBar.classList.remove('show');
+                }, duration);
+            }
+            
+            // --- WORKOUT LOGIC ---
+            function generateWorkout() {
+                const goal = document.querySelector('#goal-selector .selection-bubble.selected').dataset.value;
+                const level = document.querySelector('#level-selector .selection-bubble.selected').dataset.value;
+                const equipment = document.querySelector('#equipment-selector .selection-bubble.selected').dataset.value;
+                const mode = document.querySelector('#mode-selector .selection-bubble.selected').dataset.value;
+                const timerMinutes = document.getElementById('timer-minutes').value;
+                workoutList.innerHTML = '<li style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Generating your workout...</li>';
+                const prompt = `Generate a ${timerMinutes}-minute workout plan for a user with the following preferences: Goal: ${goal}, Fitness Level: ${level}, Equipment: ${equipment}, Workout Mode: ${mode}. Provide the plan as a numbered list of exercises with sets/reps or time, including a warm-up and cool-down. No special characters or greetings.`;
+                
+                fetch('http://127.0.0.1:5000/api/askAI', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: prompt })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const workoutItems = data.answer.split('\n').filter(item => item.trim() !== '');
+                        if (workoutItems.length > 0 && workoutItems[0].trim().startsWith("Hello there!")) workoutItems.shift();
+                        workoutHeading.textContent = 'Your Custom Workout:';
+                        workoutList.innerHTML = workoutItems.map(item => `<li>${item.replace(/^\*?\s*(\d+\.)?\s*/, '')}</li>`).join('');
+                        
+                        workoutOutputPage.style.display = 'flex';
+                        timerControls.style.display = 'flex';
+                        timerDisplay.style.display = 'block';
+                        workoutOutputPage.scrollIntoView({behavior: "smooth"});
+                    } else {
+                        showNotification('Error generating workout: ' + data.message);
+                        workoutList.innerHTML = '<li style="color: red; text-align: center;">Failed to generate workout. Please try again.</li>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('An error occurred with the AI service. Please check the server and try again.');
+                    workoutList.innerHTML = '<li style="color: red; text-align: center;">An unexpected error occurred.</li>';
+                });
+            }
+            
+            async function logWorkout() {
+                try {
+                    const workoutItems = Array.from(workoutList.children).map(item => item.textContent);
+                    if (workoutItems.length === 0 || workoutList.querySelector('.fa-spinner')) {
+                         showNotification('Please generate a workout first.');
+                         return;
+                    }
+                    const workoutData = {
+                        goal: document.querySelector('#goal-selector .selection-bubble.selected').dataset.value,
+                        level: document.querySelector('#level-selector .selection-bubble.selected').dataset.value,
+                        equipment: document.querySelector('#equipment-selector .selection-bubble.selected').dataset.value,
+                        mode: document.querySelector('#mode-selector .selection-bubble.selected').dataset.value,
+                        date: new Date().toISOString(),
+                        exercises: workoutItems,
+                        user_email: localStorage.getItem('user_email') || 'test@example.com'
+                    };
+                    
+                    const response = await fetch('http://127.0.0.1:5000/api/workout-logs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify(workoutData)
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    const emptyMessage = workoutHistory.querySelector('.empty-history-message');
+                    if (emptyMessage) emptyMessage.remove();
+                    
+                    const logItem = document.createElement('div');
+                    logItem.className = 'log-history-item';
+                    logItem.innerHTML = `<h4>Logged Workout on ${new Date(workoutData.date).toLocaleString()}</h4><p><strong>Goal:</strong> ${workoutData.goal}</p><ul>${workoutData.exercises.map(item => `<li>${item}</li>`).join('')}</ul>`;
+                    workoutHistory.prepend(logItem);
+                    showNotification('Workout logged successfully!');
+                } catch (error) {
+                    console.error('Error saving workout log:', error);
+                    showNotification('Failed to save workout log. Please try again.');
+                }
+            }
+            
+            function clearHistory() {
+                if(clearHistoryBtn.dataset.confirm === "true") {
+                    workoutHistory.innerHTML = '<p class="empty-history-message">No workouts logged yet. Generate and log your first one!</p>';
+                    showNotification("History Cleared!");
+                    clearHistoryBtn.textContent = "Clear History";
+                    delete clearHistoryBtn.dataset.confirm;
+                } else {
+                    clearHistoryBtn.textContent = "Are you sure? Click again.";
+                    clearHistoryBtn.dataset.confirm = "true";
+                    setTimeout(() => {
+                        clearHistoryBtn.textContent = "Clear History";
+                        delete clearHistoryBtn.dataset.confirm;
+                    }, 3000);
+                }
+            }
+            
+            function updateTimer() {
+                const minutes = Math.floor(currentSeconds / 60);
+                const seconds = currentSeconds % 60;
+                timerDisplay.textContent = `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                if (currentSeconds-- <= 0) {
+                    clearInterval(timerInterval);
+                    alarmSound.play().catch(()=>{});
+                    timerDisplay.textContent = "TIME'S UP!";
+                    startTimerBtn.style.display = 'block';
+                    stopTimerBtn.style.display = 'none';
+                }
+            }
+            
+            // --- EVENT LISTENERS ---
+            form.addEventListener('submit', (e) => { e.preventDefault(); generateWorkout(); });
+            
+            shuffleButton.addEventListener('click', () => {
+                 document.querySelector('#equipment-selector .selection-bubble[data-value="random"]').click();
+                 generateWorkout();
+            });
+            resetButton.addEventListener('click', () => {
+                document.querySelectorAll('.bubble-container').forEach(c => {
+                    c.querySelectorAll('.selection-bubble').forEach(b => b.classList.remove('selected'));
+                    c.firstElementChild.classList.add('selected');
+                });
+                workoutList.innerHTML = '';
+            });
+            logButton.addEventListener('click', logWorkout);
+            clearHistoryBtn.addEventListener('click', clearHistory);
+            backToFormBtn.addEventListener('click', () => document.getElementById('form-container').scrollIntoView({behavior: "smooth"}));
+            
+            startTimerBtn.addEventListener('click', () => {
+                const minutes = document.getElementById('timer-minutes').value;
+                if (minutes > 0) {
+                    currentSeconds = minutes * 60;
+                    clearInterval(timerInterval);
+                    timerInterval = setInterval(updateTimer, 1000);
+                    startTimerBtn.style.display = 'none';
+                    stopTimerBtn.style.display = 'block';
+                } else {
+                    showNotification('Please set a valid timer duration.');
+                }
+            });
+            stopTimerBtn.addEventListener('click', () => {
+                clearInterval(timerInterval);
+                startTimerBtn.style.display = 'block';
+                stopTimerBtn.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
